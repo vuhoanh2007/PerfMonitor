@@ -7,7 +7,10 @@ class Program
         while (true)    
         {
             manager.UpdateAll();
-            manager.PrintAll();
+            foreach(var hw in manager.GetHardwares())
+            {
+                Console.WriteLine(hw.GetInfo());
+            }
             Thread.Sleep(1000);
             Console.Clear();
         }
@@ -45,14 +48,19 @@ class CPU : Hardware
             sub.Update();
         }
 
+        var load = cpu.Sensors
+            .FirstOrDefault(s => s.SensorType == SensorType.Load);
+        var tempt = cpu.Sensors
+            .FirstOrDefault(s => s.SensorType == SensorType.Temperature);
+
         foreach(var sensor in cpu.Sensors)
         {
-            if(sensor.SensorType == SensorType.Load && sensor.Name.Contains("Total"))
+            if(sensor.SensorType == SensorType.Load && load!=null && sensor.Name.Contains(load.Name))
             {
                 Usage = (int)sensor.Value.GetValueOrDefault();
             }
 
-            if(sensor.SensorType == SensorType.Temperature && sensor.Name.Contains("Package"))
+            if(sensor.SensorType == SensorType.Temperature && tempt!=null && sensor.Name.Contains(tempt.Name))
             {
                 Temperature = sensor.Value.GetValueOrDefault();
             }
@@ -82,9 +90,13 @@ class GPU : Hardware
     public override void Update()
     {
         gpu.Update();
+       
+        var load = gpu.Sensors
+            .FirstOrDefault(s => s.SensorType == SensorType.Load);
+        
         foreach(var sensor in gpu.Sensors)
         {
-            if(sensor.SensorType == SensorType.Load && sensor.Name.Contains("Total"))
+            if(sensor.SensorType == SensorType.Load && load != null && sensor.Name.Contains(load.Name))
             {
                 Usage = (int)sensor.Value.GetValueOrDefault();
             }
@@ -132,12 +144,9 @@ class HardwareManager : IDisposable
         }   
     }
 
-    public void PrintAll()
+    public IEnumerable<Hardware> GetHardwares()
     {
-        foreach(var hw in hardwares)
-        {
-            Console.WriteLine(hw.GetInfo());
-        }
+        return hardwares;
     }
 }
 
@@ -158,9 +167,13 @@ class Memory : Hardware
     public override void Update()
     {
         mem.Update();
+        
+        var load = mem.Sensors
+            .FirstOrDefault(s => s.SensorType == SensorType.Load);
+        
         foreach(var sensor in mem.Sensors)
         {
-            if(sensor.SensorType == SensorType.Load && sensor.Name.Contains("Total"))
+            if(sensor.SensorType == SensorType.Load && load!=null && sensor.Name.Contains(load.Name))
             {
                 Usage = (int)sensor.Value.GetValueOrDefault();
             }
