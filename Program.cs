@@ -11,7 +11,7 @@ class Program
             {
                 Console.WriteLine(hw.GetInfo());
             }
-            Thread.Sleep(1000);
+            Thread.Sleep(500);
             Console.Clear();
         }
     }
