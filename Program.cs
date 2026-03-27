@@ -1,19 +1,80 @@
-﻿using LibreHardwareMonitor.Hardware;
+﻿using System;
+using System.Runtime.InteropServices;
+using System.Drawing;
+using System.Windows.Forms;
+using LibreHardwareMonitor.Hardware;
+using Mono.Unix.Native;
+
 class Program
 {
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    extern static bool DestroyIcon(IntPtr handle);
+    static NotifyIcon TrayIcon;
+    static System.Windows.Forms.Timer timer;
+    static HardwareManager manager;
+
+    [STAThread]
     static void Main()
     {
-        Console.Clear();
-        using var manager = new HardwareManager();
-        while (true)    
+        Application.EnableVisualStyles();
+        Application.SetCompatibleTextRenderingDefault(false);
+
+        manager = new HardwareManager();
+
+        TrayIcon = new NotifyIcon()
         {
-            manager.UpdateAll();
-            foreach(var hw in manager.GetHardwares())
+            Text = "PerfMonitor starting ... ",
+            Visible = true,
+            ContextMenuStrip = new ContextMenuStrip()
+        };
+        TrayIcon.ContextMenuStrip.Items.Add("Exit", null, (s, e) => Application.Exit());
+        
+        timer = new System.Windows.Forms.Timer();
+        timer.Interval = 1000;
+        timer.Tick += Timer_Tick;
+        timer.Start();
+        
+        Application.Run();
+
+        TrayIcon.Visible = false;
+        TrayIcon.Dispose();
+        manager.Dispose();
+    }
+
+    private static void Timer_Tick(Object? sender, EventArgs e)
+    {
+        manager.UpdateAll();
+
+        var hardwares = manager.GetHardwares();
+        var cpu = hardwares.FirstOrDefault(h => h.Name == "CPU") as CPU;
+
+        if (cpu != null)
+        {
+            DrawTrayIcon(cpu.Usage.ToString());
+            TrayIcon.Text = cpu.GetInfo();
+        }
+    }
+
+    private static void DrawTrayIcon(string Text)
+    {
+        using (Bitmap bitmap = new Bitmap(16, 16))
+        using (Graphics g = Graphics.FromImage(bitmap))
+        {
+            g.Clear(Color.Transparent);
+
+            using(Font font = new Font("Tahoma", 8, FontStyle.Bold))
+            using(Brush brush = new SolidBrush(Color.White))
             {
-                Console.WriteLine(hw.GetInfo());
+                g.DrawString(Text, font, brush, -2,2);
             }
-            Thread.Sleep(500);
-            Console.SetCursorPosition(0,0);
+        
+            IntPtr hIcon = bitmap.GetHicon();
+            Icon icon = Icon.FromHandle(hIcon);
+
+            TrayIcon.Icon = icon;
+
+            DestroyIcon(hIcon);
+            icon.Dispose();
         }
     }
 }
@@ -54,7 +115,7 @@ class CPU : Hardware
 
         if(loadSensor != null)
         {
-            Usage = (int)loadSensor.Value.GetValueOrDefault();;
+            Usage = (int)loadSensor.Value.GetValueOrDefault();
         }
         if(tempSensor != null)
         {
