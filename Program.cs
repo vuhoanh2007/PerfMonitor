@@ -3,6 +3,7 @@ class Program
 {
     static void Main()
     {
+        Console.Clear();
         using var manager = new HardwareManager();
         while (true)    
         {
@@ -12,7 +13,7 @@ class Program
                 Console.WriteLine(hw.GetInfo());
             }
             Thread.Sleep(500);
-            Console.Clear();
+            Console.SetCursorPosition(0,0);
         }
     }
 }
@@ -48,22 +49,16 @@ class CPU : Hardware
             sub.Update();
         }
 
-        var load = cpu.Sensors
-            .FirstOrDefault(s => s.SensorType == SensorType.Load);
-        var tempt = cpu.Sensors
-            .FirstOrDefault(s => s.SensorType == SensorType.Temperature);
+        var loadSensor = cpu.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Load && s.Name == "CPU Total");
+        var tempSensor = cpu.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Temperature && s.Name.Contains("Package"));
 
-        foreach(var sensor in cpu.Sensors)
+        if(loadSensor != null)
         {
-            if(sensor.SensorType == SensorType.Load && load!=null && sensor.Name.Contains(load.Name))
-            {
-                Usage = (int)sensor.Value.GetValueOrDefault();
-            }
-
-            if(sensor.SensorType == SensorType.Temperature && tempt!=null && sensor.Name.Contains(tempt.Name))
-            {
-                Temperature = sensor.Value.GetValueOrDefault();
-            }
+            Usage = (int)loadSensor.Value.GetValueOrDefault();;
+        }
+        if(tempSensor != null)
+        {
+            Temperature = tempSensor.Value.GetValueOrDefault();
         }
     }
 
@@ -91,16 +86,10 @@ class GPU : Hardware
     {
         gpu.Update();
        
-        var load = gpu.Sensors
-            .FirstOrDefault(s => s.SensorType == SensorType.Load);
-        
-        foreach(var sensor in gpu.Sensors)
+        var loadSensor = gpu.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Load);
+        if(loadSensor != null)
         {
-            if(sensor.SensorType == SensorType.Load && load != null && sensor.Name.Contains(load.Name))
-            {
-                Usage = (int)sensor.Value.GetValueOrDefault();
-            }
-            
+            Usage = (int)loadSensor.Value.GetValueOrDefault();
         }
     }
 
@@ -168,15 +157,10 @@ class Memory : Hardware
     {
         mem.Update();
         
-        var load = mem.Sensors
-            .FirstOrDefault(s => s.SensorType == SensorType.Load);
-        
-        foreach(var sensor in mem.Sensors)
+        var loadSensor = mem.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Load);
+        if(loadSensor != null)
         {
-            if(sensor.SensorType == SensorType.Load && load!=null && sensor.Name.Contains(load.Name))
-            {
-                Usage = (int)sensor.Value.GetValueOrDefault();
-            }
+            Usage = (int)loadSensor.Value.GetValueOrDefault();
         }
     }
 
