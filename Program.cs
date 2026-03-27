@@ -9,9 +9,9 @@ class Program
 {
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     extern static bool DestroyIcon(IntPtr handle);
-    static NotifyIcon TrayIcon;
-    static System.Windows.Forms.Timer timer;
-    static HardwareManager manager;
+    static NotifyIcon? cpuIcon, gpuIcon, ramIcon;
+    static System.Windows.Forms.Timer? timer;
+    static HardwareManager? manager;
 
     [STAThread]
     static void Main()
@@ -21,14 +21,13 @@ class Program
 
         manager = new HardwareManager();
 
-        TrayIcon = new NotifyIcon()
-        {
-            Text = "PerfMonitor starting ... ",
-            Visible = true,
-            ContextMenuStrip = new ContextMenuStrip()
-        };
-        TrayIcon.ContextMenuStrip.Items.Add("Exit", null, (s, e) => Application.Exit());
-        
+        ContextMenuStrip contextMenu = new ContextMenuStrip();
+        contextMenu.Items.Add("Ext PerfMonitor", null, (s,e ) => Application.Exit());
+
+        cpuIcon = new NotifyIcon() {Visible = true, ContextMenuStrip = contextMenu};
+        gpuIcon = new NotifyIcon() {Visible = true, ContextMenuStrip = contextMenu};
+        ramIcon = new NotifyIcon() {Visible = true, ContextMenuStrip = contextMenu};
+
         timer = new System.Windows.Forms.Timer();
         timer.Interval = 1000;
         timer.Tick += Timer_Tick;
@@ -36,26 +35,38 @@ class Program
         
         Application.Run();
 
-        TrayIcon.Visible = false;
-        TrayIcon.Dispose();
+        cpuIcon.Dispose();
+        gpuIcon.Dispose();
+        ramIcon.Dispose();
         manager.Dispose();
     }
 
     private static void Timer_Tick(Object? sender, EventArgs e)
     {
+        if(manager == null) return;
         manager.UpdateAll();
 
-        var hardwares = manager.GetHardwares();
-        var cpu = hardwares.FirstOrDefault(h => h.Name == "CPU") as CPU;
+        var hardwares = manager.GetHardwares().ToList();
+        
+        var cpu = hardwares.FirstOrDefault(s=>s.Name == "CPU") as CPU;
+        var gpu = hardwares.FirstOrDefault(s=>s.Name == "GPU") as GPU;
+        var mem = hardwares.FirstOrDefault(s=>s.Name == "MEM") as Memory;
 
-        if (cpu != null)
+        if (cpu != null && cpuIcon != null)
         {
-            DrawTrayIcon(cpu.Usage.ToString());
-            TrayIcon.Text = cpu.GetInfo();
+            UpdateIcon(cpuIcon, cpu.Usage.ToString(), Brushes.Red, cpu.GetInfo());
+        }
+        if(gpu != null && gpuIcon != null)
+        {
+            UpdateIcon(gpuIcon, gpu.Usage.ToString(),Brushes.DeepSkyBlue, gpu.GetInfo());
+        }
+        if(mem != null && ramIcon != null)
+        {
+            UpdateIcon(ramIcon, mem.Usage.ToString(), Brushes.LimeGreen, mem.GetInfo());
         }
     }
 
-    private static void DrawTrayIcon(string Text)
+    private static void UpdateIcon(NotifyIcon targetIcon, string text, Brush textBrush, string tooltipText)
     {
         using (Bitmap bitmap = new Bitmap(16, 16))
         using (Graphics g = Graphics.FromImage(bitmap))
@@ -63,15 +74,15 @@ class Program
             g.Clear(Color.Transparent);
 
             using(Font font = new Font("Tahoma", 8, FontStyle.Bold))
-            using(Brush brush = new SolidBrush(Color.White))
             {
-                g.DrawString(Text, font, brush, -2,2);
+                g.DrawString(text, font, textBrush, -2,2);
             }
         
             IntPtr hIcon = bitmap.GetHicon();
             Icon icon = Icon.FromHandle(hIcon);
 
-            TrayIcon.Icon = icon;
+            targetIcon.Icon = icon;
+            targetIcon.Text = tooltipText;
 
             DestroyIcon(hIcon);
             icon.Dispose();
